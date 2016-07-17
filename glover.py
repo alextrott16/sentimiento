@@ -9,12 +9,12 @@ from IPython.display import clear_output
 class glove:
     
     
-    def __init__(self, glove_txt_file='./data/glove_files/glove_840B_300d.txt'):
+    def __init__(self, glove_txt_file='glove_840B_300d.txt'):
         """
         Initialize a lookup scheme for the word vectors described in glove_txt_file
         
         Input: glove_txt_file (filepath to the relevant glove information)
-        Output: None
+        Output: nothing.
         """
         print 'Preparing information from {} ...'.format(glove_txt_file)
         sys.stdout.flush()
