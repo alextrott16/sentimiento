@@ -4,25 +4,62 @@ from theano.tensor.shared_randomstreams import RandomStreams
 import numpy as np
 
 
+class Dropout_layer:
+    """A layer to perform dropout. Super simple."""
+
+    def __init__(self, n_units, dropout=0.5):
+        """
+        Initializes the dropout layer
+        Parameters
+        ----------
+        n_units: Number of units (vector size) to apply dropout to
+        dropout: Dropout fraction (0 = no dropout)
+        """
+        err_message = 'Dropout fraction must in the domain [0, 1)'
+        assert 0.0 <= dropout < 1.0, err_message
+        self.__dropout = dropout
+
+        self.__n_units = n_units
+
+        # Initialize a random stream
+        self.rng = RandomStreams().uniform((n_units, 1))
+
+    def mask(self):
+        """Generates a theano-friendly mask that applies dropout"""
+        # Binarize a random draw to create a Bernoulli distribution
+        return T.ceil(self.rng - self.__dropout)
+
+    @property
+    def get_dropout(self):
+        """Return the dropout parameter"""
+        return self.__dropout
+
+
 class LSTM_layer:
     """A layer of an LSTM network"""
 
     def __init__(self, num_inputs=None, num_hidden=None, dropout=0.5, c_clip=1000000.):
         self.num_inputs = num_inputs
         self.num_hidden = num_hidden
-        self.dropout = dropout
+        self.__dropout = dropout
         self.curr_mask = None
         self.null_mask = None
         self.null_output_mask = None
         self.initialized = False
-        c_clip_val = np.maximum( 0., np.abs( c_clip*np.ones((1,1)).astype(theano.config.floatX) ) )
-        self.c_clip = theano.shared(c_clip_val, broadcastable=(True,True) )
+        c_clip_val = np.maximum(0., np.abs( c_clip*np.ones((1, 1)).astype(theano.config.floatX)))
+        self.c_clip = theano.shared(c_clip_val, broadcastable=(True, True))
         
         # EXPERIMENTAL
         self.g_clip = 10e50
+
+        # Initialize my dropout layer
+        self.dropout_layer = Dropout_layer(num_hidden, dropout=dropout)
+
+        # Initialize!
+        self.initialize_weights()
         
-    def set_c_clip(self,c_clip):
-        new_val = np.maximum( 0, np.abs( c_clip*np.ones((1,1)).astype(theano.config.floatX) ) )
+    def set_c_clip(self, c_clip):
+        new_val = np.maximum(0, np.abs(c_clip*np.ones((1, 1)).astype(theano.config.floatX)))
         self.c_clip.set_value(new_val)
 
     def set_weights(self, W_i, b_i, W_f, b_f, W_o, b_o):
@@ -102,7 +139,6 @@ class LSTM_layer:
             self.W_c = self.__init_W__(*W_c_size)
             self.b_c = self.__init_b__(num_hidden, b_c_offset)
 
-
         # Initialize attributes for every weight of o
         W_o_size = (num_inputs + num_hidden,  # (inp + prev_hidden)
                     num_hidden)
@@ -112,7 +148,6 @@ class LSTM_layer:
         else:
             self.W_o = self.__init_W__(*W_o_size)
             self.b_o = self.__init_b__(num_hidden, b_o_offset)
-
 
         # Initialize mask (ONLY IF YOU HAVEN'T ALREADY!!!)
         if not self.initialized:
@@ -124,32 +159,18 @@ class LSTM_layer:
 
     @staticmethod
     def __init_W__(n_in, n_out):
-        # return theano.shared(np.random.uniform(
-        #     low=-1. / np.sqrt(n_in),
-        #     high=1. / np.sqrt(n_in),
-        #     size=(n_out, n_in)).astype(theano.config.floatX))
-        # return theano.shared(np.random.uniform(
-        #     low=-1. / 4 * np.sqrt(6. / (n_in + n_out)),
-        #     high=1. / 4 * np.sqrt(6. / (n_in + n_out)),
-        #     size=(n_out, n_in)).astype(theano.config.floatX))
         return theano.shared(fan_in_out_uniform(n_in, n_out))
-        # return theano.shared(ortho_weight(n_in, n_out))
 
     @staticmethod
     def __init_b__(n, offset):
         # This is, effectively a vector, but we have to make it n-by-1 to enable broadcasting and batch processing
-        return theano.shared( (offset*np.ones((n,1))).astype(theano.config.floatX), broadcastable=(False,True) )
+        return theano.shared(
+            (offset*np.ones((n, 1))).astype(theano.config.floatX), broadcastable=(False, True))
 
     @staticmethod
     def reset_W(w):
         w_shape = w.get_value().shape
-        # w.set_value(np.random.uniform(
-        #     low=-1. / 4 * np.sqrt(6. / (w_shape[1] + w_shape[0])),
-        #     high=1. / 4 * np.sqrt(6. / (w_shape[1] + w_shape[0])),
-        #     size=w_shape).astype(theano.config.floatX)
-        # )
         w.set_value(fan_in_out_uniform(w_shape[1], w_shape[0]))
-        # w.set_value(ortho_weight(w_shape[1], w_shape[0]))
 
     @staticmethod
     def reset_b(b, offset):
@@ -161,16 +182,6 @@ class LSTM_layer:
                                        broadcastable=(True, False))
         self.null_mask = theano.shared(np.ones(shape=(self.num_hidden, 1)).astype(theano.config.floatX),
                                        broadcastable=(False, True))
-
-    def generate_masks(self):
-        srng = RandomStreams()
-        dropout_mask = np.random.binomial(n=1, p=(1 - self.dropout), size=(1, self.num_hidden)).astype(
-            theano.config.floatX)
-        self.curr_mask.set_value(dropout_mask)
-
-    def list_masks(self):
-        return [self.null_mask, self.null_mask, self.null_mask, self.null_mask, self.null_mask, self.null_mask,
-                self.null_mask, self.null_mask]
 
     def list_params(self):
         # Provide a list of all parameters to train
@@ -198,7 +209,7 @@ class LSTM_layer:
     def calc_h(self, curr_o, curr_c):
         return curr_o * T.tanh(curr_c)
 
-    def step(self, inp, prev_c, prev_h):
+    def step(self, inp, prev_c, prev_h, mask):
         # Put this together in a method for updating c, and h
         cat_inp = T.concatenate([inp, prev_h])
         i = self.calc_i(cat_inp)
@@ -206,16 +217,16 @@ class LSTM_layer:
         u = self.calc_u(cat_inp)
         c = self.calc_c(prev_c, f, i, u)
         o = self.calc_o(cat_inp)
-        h = self.calc_h(o, c)
+        h = self.calc_h(o, c) * mask  # Mask applies dropout
 
         return c, h, i, f, o
-    
-    
-    def process(self, sequences):
+
+    def process(self, sequences, mask):
         """
         Processes a batch of sequences
         :param sequences: tensor3() Variable
             Treated as size=(longest_sequence, input_dimension, n_examples)
+        :mask: a pre-generated dropout mask from self.dropout_layer
         :return C: sequence of memory cell activations
         :return H: sequence of hidden activations
         :return I: sequence of input gate activations
@@ -232,24 +243,39 @@ class LSTM_layer:
             None
             ]
 
-        ([C,H,I,F,O],updates) = theano.scan(fn=self.step,
-                                        sequences=sequences,
-                                        outputs_info=out_init)
+        ([C, H, I, F, O], updates) = theano.scan(fn=self.step,
+                                                 sequences=sequences,
+                                                 outputs_info=out_init,
+                                                 non_sequences=[mask])
 
         return C, H, I, F, O
 
 
-class LSTM_stack:
-    """A stack of LSTMs"""
+class Base_LSTM_stack:
+    """A stack of LSTMs (Base class)"""
 
-    def __init__(self, inp_dim, layer_spec_list, dropout=0.0):
-        """
-        Create each layer. Store them as a list.
+    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5):
+        """A super hacky attempt at a general init"""
+        # (This is gonna get over-written, so it's just here for convention)
+        self.gen_init(inp_dim, layer_spec_list, inp_dropout)
 
-        :param inp_dim: dimensionality of network input as a scalar
-        :param layer_spec_list: List of layer sizes (by hidden size). Each element adds a layer.)
-        :return: None
+    def gen_init(self, inp_dim, layer_spec_list, inp_dropout=0.5, bi_flag=False):
+        # This is the init function we actually want to be inherited. Hacky. I know.
         """
+        Manages multiple layers of LSTM
+
+        Parameters
+        ----------
+        inp_dim: dimensionality of the input
+        inp_dropout: dropout fraction for the input
+        layer_spec_list: a list of tuples; each element of the list specifies a layer by (hidden_size, dropout_fraction)
+        bi_flag: boolean, specifies whether building a bi-directional or standard LSTM stack
+        """
+        # First, initialize an input dropout layer
+        self.inp_dropout_layer = Dropout_layer(inp_dim, inp_dropout)
+
+        # Then, initialize the rest of the layers
+        self.out_dim = 0
         self.layers = []
         for K, spec in enumerate(layer_spec_list):
             # If the first layer, set the input dimensionality to the dimensionality of the input to the entire
@@ -257,14 +283,17 @@ class LSTM_stack:
             if K == 0:
                 my_inps = inp_dim
             else:
-                my_inps = layer_spec_list[K-1]
+                my_inps = layer_spec_list[K-1][0]
+                if bi_flag:
+                    my_inps *= 2
 
             # Initialize it now
-            new_layer = LSTM_layer(my_inps, spec, dropout=dropout)
-            new_layer.initialize_weights()
-            new_layer.initialize_masks()
-            
+            new_layer = LSTM_layer(my_inps, spec[0], dropout=spec[1])
             self.layers = self.layers + [new_layer]
+
+            self.out_dim += spec[0]
+            if bi_flag:
+                self.out_dim += spec[0]
 
     def initialize_stack_weights(self, b_i_offset=0., b_f_offset=0., b_c_offset=0., b_o_offset=0.):
         """
@@ -303,21 +332,24 @@ class LSTM_stack:
 
         return P
 
-    def list_masks(self):
-        # Return all the masks in this stack.... You sure? YES I"M SURE I'M AN ADULT!!!
-        # I HATE YOU
-        # YOU'RE NOT MY REAL DAD
-        M = []
-        for L in self.layers:
-            M = M + L.list_masks()
 
-        return M
+class LSTM_stack(Base_LSTM_stack):
+    """A vanilla (forward) LSTM stack"""
 
-    def generate_masks(self):
-        for L in self.layers:
-            L.generate_masks()
+    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5):
+        """
+        Manages multiple layers of LSTM
 
-    def process(self, inp_sequences, seq_lengths):
+        Parameters
+        ----------
+        inp_dim: dimensionality of the input
+        inp_dropout: dropout fraction for the input
+        layer_spec_list: a list of tuples; each element of the list specifies a layer by (hidden_size, dropout_fraction)
+        """
+        self.bi_flag = False
+        self.gen_init(inp_dim, layer_spec_list, inp_dropout, self.bi_flag)
+
+    def process(self, inp_sequences, seq_lengths, test_flag=False):
         """
         This network component's symbolic graph. Full input -> output function performed by this component.
         This function takes/returns **Theano Variables**
@@ -329,6 +361,8 @@ class LSTM_stack:
         seq_lengths: ivector() Variable
             seq_lengths[i] = The shape[0] of inp_sequences[:,:,i] before zero-padding
             So, it is treated as size=(n_examples,)
+        test_flag: Boolean
+            Specifies whether to build the graph with train (default) or test/dev dropout
             
         Returns
         -------
@@ -338,76 +372,134 @@ class LSTM_stack:
         """
         # Go through the whole input and return the concatenated outputs of the stack after it's all said and done
         outs = []
-        all_I = []
-        all_F = []
-        all_C = []
-        all_O = []
-        all_H = []
         for K, layer in enumerate(self.layers):
             if K == 0:
-                curr_seq = inp_sequences
+                if test_flag:
+                    # Use the fixed dropout mask
+                    curr_seq = inp_sequences * (1 - self.inp_dropout_layer.get_dropout)
+                else:
+                    # Use the random stream
+                    curr_seq = inp_sequences * self.inp_dropout_layer.mask()[None, :, :]
             else:
-                curr_seq = last_H  # (from previous layer)
+                curr_seq = last_H  # (from previous layer, dropout already applied)
             
             # Process the sequence for the next dude
-            C, H, I, F, O = layer.process(curr_seq)
+            if test_flag:
+                mask = (1 - layer.dropout_layer.get_dropout)
+            else:
+                mask = layer.dropout_layer.mask()
+            _, H, _, _, _ = layer.process(curr_seq, mask)
             last_H = H
             
             # Return, for each example, only the final H -- where "final" refers to the true sequence length
-            outs = outs + [ H[seq_lengths-1, :, T.arange(curr_seq.shape[2])] ]
-            
-            # Grow the hiddens
-            all_I += [I]
-            all_F += [F]
-            all_C += [C]
-            all_O += [O]
-            all_H += [H]
-            
-        # Concatenate the grown hiddens
-        I = T.concatenate( all_I, axis=1 )
-        F = T.concatenate( all_F, axis=1 )
-        C = T.concatenate( all_C, axis=1 )
-        O = T.concatenate( all_O, axis=1 )
-        H = T.concatenate( all_H, axis=1 )
+            outs = outs + [last_H[seq_lengths-1, :, T.arange(curr_seq.shape[2])]]
 
         # Transpose so that we are consistent with things expecting n_dim-by-n_examples
-        return T.transpose(T.concatenate( outs, axis=1 )), I, F, C, O, H
+        return T.transpose(T.concatenate(outs, axis=1))
 
-    
+
+class BiLSTM_stack(Base_LSTM_stack):
+    """A Bi-directional LSTM stack"""
+
+    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5):
+        """
+        Manages multiple layers of LSTM
+
+        Parameters
+        ----------
+        inp_dim: dimensionality of the input
+        inp_dropout: dropout fraction for the input
+        layer_spec_list: a list of tuples; each element of the list specifies a layer by (hidden_size, dropout_fraction)
+        """
+        self.bi_flag = True
+        self.gen_init(inp_dim, layer_spec_list, inp_dropout, self.bi_flag)
+
+    def process(self, inp_sequences, seq_lengths, test_flag=False):
+        """
+        This network component's symbolic graph. Full input -> output function performed by this component.
+        This function takes/returns **Theano Variables**
+
+        Parameters
+        ------
+        inp_sequences: tensor4() Variable
+            Treated as size=(longest_sequence, input_dimension, n_examples, 2)
+            This a concatenation along the 4th dimension of two tensor3 matrices
+            inp_sequences[:, :, :, 0] would be an appropriate input to a vanilla LSTM stack
+            inp_sequences[:, :, :, 1] is the input sequence oppositely zero padded and reversed
+        seq_lengths: ivector() Variable
+            seq_lengths[i] = The shape[0] of inp_sequences[:,:,i] before zero-padding
+            So, it is treated as size=(n_examples,)
+        test_flag: Boolean
+            Specifies whether to build the graph with train (default) or test/dev dropout
+
+        Returns
+        -------
+        Outputs at end of a given sequence, concatenated across layers
+
+
+        """
+        # Go through the whole input and return the concatenated outputs of the stack after it's all said and done
+        outs = []
+        for K, layer in enumerate(self.layers):
+            if K == 0:
+                if test_flag:
+                    # Use the fixed dropout mask
+                    curr_seq_f = inp_sequences[:, :, :, 0] * (1 - self.inp_dropout_layer.get_dropout)
+                    curr_seq_b = inp_sequences[:, :, :, 1] * (1 - self.inp_dropout_layer.get_dropout)
+                else:
+                    # Use the random stream
+                    curr_seq_f = inp_sequences[:, :, :, 0] * self.inp_dropout_layer.mask()[None, :, :]
+                    curr_seq_b = inp_sequences[:, :, :, 1] * self.inp_dropout_layer.mask()[None, :, :]
+            else:
+                curr_seq_f = last_H_f  # (from previous layer, dropout already applied)
+                curr_seq_b = last_H_b  # (from previous layer, dropout already applied)
+
+            # Process the sequence for the next dude
+            if test_flag:
+                mask = (1 - layer.dropout_layer.get_dropout)
+            else:
+                mask = layer.dropout_layer.mask()
+            _, fH, _, _, _ = layer.process(curr_seq_f, mask)
+            _, bH, _, _, _ = layer.process(curr_seq_b, mask)
+            last_fH = fH
+            last_bH = bH
+
+            # Return, for each example, only the final H -- where "final" refers to the true sequence length
+            f_out = last_fH[seq_lengths - 1, :, T.arange(curr_seq_f.shape[2])]
+            b_out = last_bH[seq_lengths - 1, :, T.arange(curr_seq_b.shape[2])]
+            outs = outs + [T.concatenate([f_out, b_out], axis=1)]
+
+            # Set up the input to the next layer (assuming there is one)
+            # ... concatenate into the (forward) hidden sequence out of this layer
+            last_H_f = T.concatenate([last_fH, last_bH], axis=1)
+            # ... create the reverse instance
+            mat = T.concatenate(
+                [T.zeros([T.max(seq_lengths), last_H_f.shape[1], last_H_f.shape[2]]), last_H_f], axis=0)
+            # (trust me, it works)
+            last_H_b, _ = theano.scan(
+                fn=lambda offset, m, length, max_len: T.transpose(
+                    m[max_len + length - 1 - offset, :, T.arange(mat.shape[2])]),
+                sequences=[T.arange(T.max(seq_lengths))],
+                outputs_info=[None],
+                non_sequences=[mat, seq_lengths, T.max(seq_lengths)])
+
+        # Transpose so that we are consistent with things expecting n_dim-by-n_examples
+        return T.transpose(T.concatenate(outs, axis=1))
+
+
 class soft_reader:
     """A softmax layer"""
 
     def __init__(self, num_inputs, num_outputs):
         # This is a simple layer, described just by a single weight matrix (no bias)
-        # self.w = theano.shared(np.random.uniform(
-        #         low=-1. / np.sqrt(num_inputs),
-        #         high=1. / np.sqrt(num_inputs),
-        #         size=(num_outputs, num_inputs) ).astype(theano.config.floatX))
-        # self.w = theano.shared(np.random.uniform(
-        #     low=-1. / 4 * np.sqrt(6. / (num_inputs + num_outputs)),
-        #     high=1. / 4 * np.sqrt(6. / (num_inputs + num_outputs)),
-        #     size=(num_outputs, num_inputs)).astype(theano.config.floatX))
-        self.w = theano.shared(fan_in_out_uniform(num_inputs, num_outputs))
-        # self.w = theano.shared(ortho_weight(num_inputs, num_outputs))
+        self.num_inputs = num_inputs
+        self.num_outputs = num_outputs
 
-        # Create a null_mask
-        self.null_mask = theano.shared(np.ones(shape=(num_outputs, 1)).astype(theano.config.floatX),
-                                       broadcastable=(False, True))
+        self.w = theano.shared(fan_in_out_uniform(num_inputs, num_outputs))
 
     def initialize_weights(self):
         w_shape = self.w.get_value().shape
-        # self.w.set_value(
-        #     np.random.uniform(
-        #         low=-1. / 4 * np.sqrt(6. / (w_shape[1] + w_shape[0])),
-        #         high=1. / 4 * np.sqrt(6. / (w_shape[1] + w_shape[0])),
-        #         size=w_shape
-        #     ).astype(theano.config.floatX)
-        # )
         self.w.set_value(fan_in_out_uniform(w_shape[1], w_shape[0]))
-        # self.w.set_value(ortho_weight(w_shape[1], w_shape[0]))
-
-    def list_masks(self):
-        return [self.null_mask]
 
     def list_params(self):
         # Easy.
@@ -429,8 +521,49 @@ class soft_reader:
             Treated as size=(num_outputs, num_examples) <--- Each column sums to 1
         """
         # Do your soft max kinda thing.
-        P = T.transpose( T.dot(self.w, inp) )
-        return T.transpose( T.nnet.softmax(P) )
+        p = T.transpose(T.dot(self.w, inp))
+        return T.transpose(T.nnet.softmax(p))
+
+
+class single_class_sigmoid:
+
+    def __init__(self, num_inputs):
+        """
+        Performs a dot product and adds a bias, into a sigmoid, producing a scalar output
+
+        Parameters
+        ----------
+        num_inputs: Dimensionality of the input (a matrix of size num_inputs-x-num_examples)
+        """
+        self.num_inputs = num_inputs
+        self.initialize_weights()
+
+    def initialize_weights(self):
+        self.w = theano.shared(fan_in_out_uniform(self.num_inputs, 1))
+
+        self.b = theano.shared(
+            (np.zeros((1, 1))).astype(theano.config.floatX), broadcastable=(True, True)
+        )
+
+    def list_params(self):
+        return [self.w, self.b]
+
+    def process(self, inp):
+        """
+        This network component's symbolic graph. Full input -> output function performed by this component.
+        This function takes/returns **Theano Variables**
+
+        Inputs
+        ------
+        inp: dmatrix() Variable
+            Treated as size=(inp_dimension, num_examples)  <--- BATCH PROCESSING
+
+        Outputs
+        -------
+        Outputs a Theano Variable
+            Treated as size=(num_examples) <--- Scalar output for each example
+        """
+        return T.nnet.sigmoid(T.dot(self.w, inp) + self.b).flatten()
 
 
 def ortho_weight(n_in, n_out):
