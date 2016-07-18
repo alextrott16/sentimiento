@@ -3,8 +3,8 @@ import theano.tensor as T
 import numpy as np
 
 
-def adam_loves_theano(inp_list, cost, param_list, mask_list, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-7,
-                      grad_max_norm=5):
+def adam_loves_theano(inp_list, cost, param_list, cost_belonging=None,
+                      alpha=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-7):
     """
     adam: adaptive... momentum???
 
@@ -12,13 +12,19 @@ def adam_loves_theano(inp_list, cost, param_list, mask_list, alpha=0.001, beta1=
     ----------
     inp_list: List of Theano variables
         Whatever non-parameter things are needed to do a training step
-    cost: Theano variable
-        Objective fucntion to minimize
+    cost: Theano variable or list of Theano variables
+        Objective function(s) to minimize
     param_list: List of Theano variables
         The variables that are changed for optimization
-    mask_list: List of Theano variables
-        The theano variable masks for each parameter
-    [alpha]: {0.001}
+    [cost_belonging]: {None}
+        If cost is a single Theano variable, this is ignored.
+        If cost is a list, cost_belonging is a list of length len(param_list) that says
+        which cost each parameter belongs to.
+            For example, cost_belonging[3] = 1 means that the parameter at param_list[3]
+            is associated with the cost at cost[1]
+        If cost is a list and cost_belonging is not specified, all parameters will be,
+        by default, assocated with the first cost in the cost list
+    [alpha]: {0.0001}
         Training parameter: learning rate
     [beta1]: {0.9}
         Training parameter: decay rate for momentum
@@ -26,8 +32,8 @@ def adam_loves_theano(inp_list, cost, param_list, mask_list, alpha=0.001, beta1=
         Training parameter: decay rate for velocity
     [epsilon]: {1e-7}
         Training parameter: i dunno.
-    [grad_max_norm]: {5}
-        Training parameter: Maximum norm for the gradient for each input weight
+    
+        
 
     Outputs
     -------
@@ -43,7 +49,24 @@ def adam_loves_theano(inp_list, cost, param_list, mask_list, alpha=0.001, beta1=
 
     # Create the first function:
     # (These are going to be useful to precompute and store as a list):
-    grads = [T.grad(cost, p) for p in param_list]
+    if type(cost) == list:
+        # See if a cost_belonging was supplied
+        if cost_belonging != None:
+            # It was. Make sure it's valid.
+            assert type(cost_belonging) == list
+            assert len(cost_belonging) == len(param_list)
+            assert max(cost_belonging) <= len(cost)
+        else:
+            # It wasn't. Use the default.
+            cost_belonging = [0 for i in range(len(param_list))]
+
+        # Compute gradients
+        grads = [T.grad(cost[c], p) for c, p in zip(cost_belonging, param_list)]
+        
+    else:
+        # Compute gradients with respect to the single objective
+        grads = [T.grad(cost, p) for p in param_list]
+        
     # Initialize the helper variables, one for each parameter (this will only happen once and doesn't affect updates)
     Ts = [theano.shared(p.get_value()*np.zeros(1).astype(theano.config.floatX), broadcastable=g.broadcastable)
           for p, g in zip(param_list, grads)]  # t term in adam
@@ -57,64 +80,35 @@ def adam_loves_theano(inp_list, cost, param_list, mask_list, alpha=0.001, beta1=
 
     # Define shared variable of network hyperparameters
     adam_hyperparam_list = theano.shared(
-        np.array([grad_max_norm, alpha, beta1, beta2, epsilon])
+        np.array([alpha, beta1, beta2, epsilon])
         .astype(theano.config.floatX)
     )
 
-    # Update grads to have a max_norm
-    new_grads = []
-    for grad_obj in grads:
-        curr_norm = grad_obj.norm(2, axis=1)
-        # curr_norm = T.addbroadcast(curr_norm, 0)
-        curr_norm = curr_norm.dimshuffle([0, 'x'])
-        scale_fac = adam_hyperparam_list[0]/curr_norm
-        # new_grads.append(grad_obj)
-        new_grads.append(grad_obj*scale_fac)
-    #     curr_value = grad_obj.get_value()
-    #
-    #     for row in range(curr_value.shape[0]):
-    #         # Get the current norm
-    #         old_norm = np.linalg.norm(curr_value[row, :])
-    #
-    #         # Normalize
-    #         scale_fac = adam_hyperparam_list.get_value()[0]/old_norm
-    #         curr_value[row, :] *= scale_fac
-    #
-    #     # Set updated value
-    #     grad_obj.set_value(curr_value)
-
-
     # Define each of their update rules
-    up_t = [(T_, T_+msk) for T_, msk in zip(Ts, mask_list)]
-    up_m = [(M, msk*(adam_hyperparam_list[2]*M + (1- adam_hyperparam_list[2])*g) + (1-msk)*M)
-            for M, p, g, msk in zip(Ms, param_list, new_grads, mask_list)]
-    up_v = [(V, msk*(adam_hyperparam_list[3]*V + (1- adam_hyperparam_list[3])*(g**2)) + (1-msk)*V)
-            for V, p, g, msk in zip(Vs, param_list, new_grads, mask_list)]
+    up_t = [(T_, T_+1 ) for T_ in Ts]
+    up_m = [(M, adam_hyperparam_list[1]*M + (1 - adam_hyperparam_list[1])*g)
+            for M, p, g in zip(Ms, param_list, grads)]
+    up_v = [(V, adam_hyperparam_list[2]*V + (1 - adam_hyperparam_list[2])*(g**2))
+            for V, p, g in zip(Vs, param_list, grads)]
 
     # Combine this into a full update list
     up_h = up_t + up_m + up_v
 
     # Create that first function
-    f_adam_helpers = theano.function(inp_list, cost, updates=up_h)
+    f_adam_helpers = theano.function(inp_list, cost, updates=up_h, no_default_updates=True)
 
     # Create the second function (during training, this is called right after calling the first):
     # Compute, using the updated helper variables, the components of the parameter update equation
     # (updated by the call to f_adam_helpers, which will occurr during training)
-    mHat = [m / (1-(adam_hyperparam_list[2]**t)) for m, t in zip(Ms, Ts)]
-    vHat = [v / (1-(adam_hyperparam_list[3]**t)) for v, t in zip(Vs, Ts)]
+    mHat = [m / (1-(adam_hyperparam_list[1]**t)) for m, t in zip(Ms, Ts)]
+    vHat = [v / (1-(adam_hyperparam_list[2]**t)) for v, t in zip(Vs, Ts)]
     # Use them to update the parameters
-    up_p = [(p, p - (adam_hyperparam_list[1]*mH / (T.sqrt(vH)+ adam_hyperparam_list[4]))*msk) for p, mH, vH, msk in zip(param_list, mHat, vHat, mask_list)]
+    up_p = [(p, p - (adam_hyperparam_list[0]*mH / (T.sqrt(vH)+ adam_hyperparam_list[3])))
+            for p, mH, vH in zip(param_list, mHat, vHat)]
     # Create your training function with this update
-    f_adam_train = theano.function(inp_list, cost, updates=up_p)
-    
-    # Combine these into a single function using this neat trick that Ari pointed out!
-    # def train_adam( *args ):
-    #     # Update helpers
-    #     f_adam_helpers( *args )
-    #     # Update parameters with updated helpers
-    #     return f_adam_train( *args )
+    f_adam_train = theano.function(inp_list, cost, updates=up_p, no_default_updates=False)
 
-    return f_adam_helpers, f_adam_train, adam_param_list, adam_hyperparam_list, new_grads
+    return f_adam_helpers, f_adam_train, adam_param_list, adam_hyperparam_list, grads
 
 
 def adadelta_fears_committment(inp_list, cost, param_list, mask_list, rho=.95, epsilon=1e-6):
@@ -232,11 +226,17 @@ def i_hate_SGD(inp_list, cost,param_list, alpha=0.01):
         Uses updated helpers to update parameters in param_list
 
     """
+    # Define shared variable of network hyperparameter (learning rate)
+    SGD_alpha = theano.shared(
+        np.array([alpha])
+        .astype(theano.config.floatX)
+    )
+    
     # This is so straightforward I should punch you if you don't understand.
-    update_rules = [(p, p-T.grad(cost, p)*alpha) for p in param_list]
+    update_rules = [(p, p-T.grad(cost, p)*SGD_alpha.get_value()) for p in param_list]
     train_SGD = theano.function(inp_list, cost, updates=update_rules)
     # Did you get it? Because if not you deserve punches.
-    return train_SGD
+    return train_SGD, SGD_alpha
 
 
 # def rmsprop(lr, tparams, grads, x, mask, y, cost):
