@@ -317,12 +317,8 @@ class Base_LSTM_stack:
                 o_off = b_o_offset[i]
             else:
                 o_off = b_o_offset
-            if type(b_y_offset) == list:
-                y_off = b_y_offset[i]
-            else:
-                y_off = b_y_offset
-            layer.initialize_weights(b_i_offset=i_off, b_f_offset=f_off, b_c_offset=c_off,
-                                     b_o_offset=o_off, b_y_offset=y_off)
+
+            layer.initialize_weights(b_i_offset=i_off, b_f_offset=f_off, b_c_offset=c_off, b_o_offset=o_off)
 
     def list_params(self):
         # Return all the parameters in this stack.... You sure?
@@ -491,11 +487,15 @@ class soft_reader:
     """A softmax layer"""
 
     def __init__(self, num_inputs, num_outputs):
-        # This is a simple layer, described just by a single weight matrix (no bias)
+        # This is a simple layer, described just by a single weight matrix and bias
         self.num_inputs = num_inputs
         self.num_outputs = num_outputs
 
         self.w = theano.shared(fan_in_out_uniform(num_inputs, num_outputs))
+
+        # This is, effectively a vector, but we have to make it n-by-1 to enable broadcasting and batch processing
+        self.b = theano.shared(
+            np.ones((num_outputs, 1)).astype(theano.config.floatX), broadcastable=(False, True))
 
     def initialize_weights(self):
         w_shape = self.w.get_value().shape
@@ -503,7 +503,7 @@ class soft_reader:
 
     def list_params(self):
         # Easy.
-        return [self.w]
+        return [self.w, self.b]
 
     def process(self, inp):
         """
@@ -518,11 +518,11 @@ class soft_reader:
         Outputs
         -------
         Outputs a Theano Variable
-            Treated as size=(num_outputs, num_examples) <--- Each column sums to 1
+            Treated as size=(num_examples, num_outputs) <--- Each row sums to 1 (categorical_crossentropy wants this)
         """
         # Do your soft max kinda thing.
-        p = T.transpose(T.dot(self.w, inp))
-        return T.transpose(T.nnet.softmax(p))
+        p = T.transpose(T.dot(self.w, inp) + self.b)
+        return T.nnet.softmax(p)
 
 
 class single_class_sigmoid:
