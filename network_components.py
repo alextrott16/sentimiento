@@ -38,7 +38,8 @@ class Dropout_layer:
 class LSTM_layer:
     """A layer of an LSTM network"""
 
-    def __init__(self, num_inputs=None, num_hidden=None, dropout=0.5, c_clip=1000000.):
+    def __init__(self, num_inputs=None, num_hidden=None, dropout=0.5, c_clip=1000000.,
+                 init_fun=fan_in_out_uniform):
         self.num_inputs = num_inputs
         self.num_hidden = num_hidden
         self.__dropout = dropout
@@ -55,35 +56,14 @@ class LSTM_layer:
         # Initialize my dropout layer
         self.dropout_layer = Dropout_layer(num_hidden, dropout=dropout)
 
+        self.init_fun = init_fun
+
         # Initialize!
         self.initialize_weights()
         
     def set_c_clip(self, c_clip):
         new_val = np.maximum(0, np.abs(c_clip*np.ones((1, 1)).astype(theano.config.floatX)))
         self.c_clip.set_value(new_val)
-
-    def set_weights(self, W_i, b_i, W_f, b_f, W_o, b_o):
-        """
-        :param W_i: LSTM input gate weights
-        :param b_i: LSTM input gate bias
-        :param W_f: LSTM forget gate weights
-        :param b_f: LSTM forget gate bias
-        :param W_o: LSTM output gate weights
-        :param b_o: LSTM output gate bias
-        :return: None
-        """
-
-        self.W_i = W_i
-        self.b_i = b_i
-
-        self.W_f = W_f
-        self.b_f = b_f
-
-        self.W_o = W_o
-        self.b_o = b_o
-
-        self.W_y = W_y
-        self.b_y = b_y
 
     def initialize_weights(self, num_inputs=None, num_hidden=None,
                            b_i_offset=0., b_f_offset=0., b_c_offset=0., b_o_offset=0.):
@@ -149,17 +129,16 @@ class LSTM_layer:
             self.W_o = self.__init_W__(*W_o_size)
             self.b_o = self.__init_b__(num_hidden, b_o_offset)
 
-        # Initialize mask (ONLY IF YOU HAVEN'T ALREADY!!!)
-        if not self.initialized:
-            self.initialize_masks()
-
         self.initialized = True
 
         # Congrats. Now this is initialized.
 
-    @staticmethod
-    def __init_W__(n_in, n_out):
-        return theano.shared(fan_in_out_uniform(n_in, n_out))
+    def __init_W__(self, n_in, n_out):
+        return theano.shared(self.init_fun(n_in, n_out))
+
+    def reset_W(self, w):
+        w_shape = w.get_value().shape
+        w.set_value(self.init_fun(w_shape[1], w_shape[0]))
 
     @staticmethod
     def __init_b__(n, offset):
@@ -168,20 +147,9 @@ class LSTM_layer:
             (offset*np.ones((n, 1))).astype(theano.config.floatX), broadcastable=(False, True))
 
     @staticmethod
-    def reset_W(w):
-        w_shape = w.get_value().shape
-        w.set_value(fan_in_out_uniform(w_shape[1], w_shape[0]))
-
-    @staticmethod
     def reset_b(b, offset):
         b_shape = b.get_value().shape
         b.set_value((offset*np.ones(b_shape)).astype(theano.config.floatX))
-
-    def initialize_masks(self):
-        self.curr_mask = theano.shared(np.ones(shape=(1, self.num_hidden)).astype(theano.config.floatX),
-                                       broadcastable=(True, False))
-        self.null_mask = theano.shared(np.ones(shape=(self.num_hidden, 1)).astype(theano.config.floatX),
-                                       broadcastable=(False, True))
 
     def list_params(self):
         # Provide a list of all parameters to train
@@ -254,12 +222,14 @@ class LSTM_layer:
 class Base_LSTM_stack:
     """A stack of LSTMs (Base class)"""
 
-    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5):
+    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5,
+                 init_fun=fan_in_out_uniform):
         """A super hacky attempt at a general init"""
         # (This is gonna get over-written, so it's just here for convention)
-        self.gen_init(inp_dim, layer_spec_list, inp_dropout)
+        self.gen_init(inp_dim, layer_spec_list, inp_dropout, init_fun)
 
-    def gen_init(self, inp_dim, layer_spec_list, inp_dropout=0.5, bi_flag=False):
+    def gen_init(self, inp_dim, layer_spec_list, inp_dropout=0.5, bi_flag=False,
+                 init_fun=fan_in_out_uniform):
         # This is the init function we actually want to be inherited. Hacky. I know.
         """
         Manages multiple layers of LSTM
@@ -271,6 +241,7 @@ class Base_LSTM_stack:
         layer_spec_list: a list of tuples; each element of the list specifies a layer by (hidden_size, dropout_fraction)
         bi_flag: boolean, specifies whether building a bi-directional or standard LSTM stack
         """
+        self.init_fun=init_fun
         # First, initialize an input dropout layer
         self.inp_dropout_layer = Dropout_layer(inp_dim, inp_dropout)
 
@@ -288,7 +259,7 @@ class Base_LSTM_stack:
                     my_inps *= 2
 
             # Initialize it now
-            new_layer = LSTM_layer(my_inps, spec[0], dropout=spec[1])
+            new_layer = LSTM_layer(my_inps, spec[0], dropout=spec[1], init_fun=self.init_fun)
             self.layers = self.layers + [new_layer]
 
             self.out_dim += spec[0]
@@ -332,7 +303,7 @@ class Base_LSTM_stack:
 class LSTM_stack(Base_LSTM_stack):
     """A vanilla (forward) LSTM stack"""
 
-    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5):
+    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5, init_fun=fan_in_out_uniform):
         """
         Manages multiple layers of LSTM
 
@@ -343,7 +314,7 @@ class LSTM_stack(Base_LSTM_stack):
         layer_spec_list: a list of tuples; each element of the list specifies a layer by (hidden_size, dropout_fraction)
         """
         self.bi_flag = False
-        self.gen_init(inp_dim, layer_spec_list, inp_dropout, self.bi_flag)
+        self.gen_init(inp_dim, layer_spec_list, inp_dropout, self.bi_flag, init_fun)
 
     def process(self, inp_sequences, seq_lengths, test_flag=False):
         """
@@ -397,7 +368,7 @@ class LSTM_stack(Base_LSTM_stack):
 class BiLSTM_stack(Base_LSTM_stack):
     """A Bi-directional LSTM stack"""
 
-    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5):
+    def __init__(self, inp_dim, layer_spec_list, inp_dropout=0.5, init_fun=fan_in_out_uniform):
         """
         Manages multiple layers of LSTM
 
@@ -408,7 +379,7 @@ class BiLSTM_stack(Base_LSTM_stack):
         layer_spec_list: a list of tuples; each element of the list specifies a layer by (hidden_size, dropout_fraction)
         """
         self.bi_flag = True
-        self.gen_init(inp_dim, layer_spec_list, inp_dropout, self.bi_flag)
+        self.gen_init(inp_dim, layer_spec_list, inp_dropout, self.bi_flag, init_fun)
 
     def process(self, inp_sequences, seq_lengths, test_flag=False):
         """
@@ -568,12 +539,13 @@ class single_class_sigmoid:
 
 def ortho_weight(n_in, n_out):
     W = np.random.randn(n_out, n_in)
-    u, s, v = np.linalg.svd(W)
-    return u.astype(theano.config.floatX)
+    u, s, v = np.linalg.svd(W, full_matrices=False)
+    q = u if u.shape == (n_out, n_in) else v
+    return q.astype(theano.config.floatX)
 
 
 def fan_in_out_uniform(n_in, n_out):
     return np.random.uniform(
-        low=-4 * np.sqrt(6. / (n_in + n_out)),
-        high=4 * np.sqrt(6. / (n_in + n_out)),
+        low=-1 * np.sqrt(6. / (n_in + n_out)),
+        high=1 * np.sqrt(6. / (n_in + n_out)),
         size=(n_out, n_in)).astype(theano.config.floatX)
