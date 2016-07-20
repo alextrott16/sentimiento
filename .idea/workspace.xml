@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="7b7019c7-d6eb-47e3-81e1-94d113e2d343" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.ipynb_checkpoints/LSTM dev-checkpoint.ipynb" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/LSTM dev-checkpoint.ipynb" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LSTM dev.ipynb" afterPath="$PROJECT_DIR$/LSTM dev.ipynb" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/network_components.py" afterPath="$PROJECT_DIR$/network_components.py" />
-    </list>
+    <list default="true" id="7b7019c7-d6eb-47e3-81e1-94d113e2d343" name="Default" comment="" />
     <ignored path="sentimiento.iws" />
     <ignored path=".idea/workspace.xml" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -24,93 +20,7 @@
     <favorites_list name="sentimiento" />
   </component>
   <component name="FileEditorManager">
-    <leaf>
-      <file leaf-file-name="network_components.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/network_components.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-15">
-              <caret line="4" column="0" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
-              <folding>
-                <element signature="e#0#13#0" expanded="true" />
-                <element signature="e#147#1058#0" expanded="false" />
-                <element signature="e#1083#8216#0" expanded="false" />
-                <element signature="e#1975#2098#0" expanded="false" />
-                <element signature="e#2408#2514#0" expanded="false" />
-                <element signature="e#3190#3268#0" expanded="false" />
-                <element signature="e#3583#3661#0" expanded="false" />
-                <element signature="e#3704#3773#0" expanded="false" />
-                <element signature="e#3800#3900#0" expanded="false" />
-                <element signature="e#3976#4054#0" expanded="false" />
-                <element signature="e#4097#4166#0" expanded="false" />
-                <element signature="e#4193#4293#0" expanded="false" />
-                <element signature="e#4369#4447#0" expanded="false" />
-                <element signature="e#4490#4559#0" expanded="false" />
-                <element signature="e#4586#4686#0" expanded="false" />
-                <element signature="e#5333#5438#0" expanded="false" />
-                <element signature="e#5475#5614#0" expanded="false" />
-                <element signature="e#5655#5717#0" expanded="false" />
-                <element signature="e#5856#5941#0" expanded="false" />
-                <element signature="e#6269#6305#0" expanded="false" />
-                <element signature="e#6354#6439#0" expanded="false" />
-                <element signature="e#6487#6517#0" expanded="false" />
-                <element signature="e#6988#8216#0" expanded="false" />
-                <element signature="e#6988#7500#1" expanded="false" />
-                <element signature="e#8246#11266#0" expanded="false" />
-                <element signature="e#9541#9640#0" expanded="false" />
-                <element signature="e#10292#10389#1" expanded="false" />
-                <element signature="e#11112#11266#0" expanded="false" />
-                <element signature="e#11308#14007#0" expanded="false" />
-                <element signature="e#11450#11762#1" expanded="false" />
-                <element signature="e#11954#14007#0" expanded="false" />
-                <element signature="e#11954#12728#1" expanded="false" />
-                <element signature="e#14051#18306#0" expanded="false" />
-                <element signature="e#14693#18306#0" expanded="false" />
-                <element signature="e#15893#18161#0" expanded="false" />
-                <element signature="e#18332#19811#0" expanded="false" />
-                <element signature="e#18929#19032#0" expanded="false" />
-                <element signature="e#19069#19108#0" expanded="false" />
-                <element signature="e#19146#19811#0" expanded="false" />
-                <element signature="e#19847#21069#0" expanded="false" />
-                <element signature="e#21107#21278#0" expanded="false" />
-                <element signature="e#21322#21498#0" expanded="false" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="senti_net.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/senti_net.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="195">
-              <caret line="13" column="18" selection-start-line="13" selection-start-column="18" selection-end-line="13" selection-end-column="18" />
-              <folding>
-                <element signature="e#0#18#0" expanded="true" />
-                <element signature="e#3473#3781#0" expanded="false" />
-                <element signature="e#3823#4296#0" expanded="false" />
-                <element signature="e#4235#4296#0" expanded="false" />
-                <element signature="e#4338#4752#0" expanded="false" />
-                <element signature="e#4797#5037#0" expanded="false" />
-                <element signature="e#5074#5222#0" expanded="false" />
-                <element signature="e#5276#5636#1" expanded="false" />
-                <element signature="e#6170#9348#0" expanded="false" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="network_optimizers.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/network_optimizers.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="390">
-              <caret line="26" column="19" selection-start-line="26" selection-start-column="19" selection-end-line="26" selection-end-column="19" />
-              <folding>
-                <element signature="e#0#13#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -401,9 +311,9 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="20" y="23" width="1400" height="781" extended-state="0" />
-    <editor active="true" />
+    <editor active="false" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
@@ -456,19 +366,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="81">
           <caret line="346" column="0" selection-start-line="346" selection-start-column="0" selection-end-line="346" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#10#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/network_optimizers.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
-          <caret line="26" column="19" selection-start-line="26" selection-start-column="19" selection-end-line="26" selection-end-column="19" />
-          <folding>
-            <element signature="e#0#13#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -486,34 +384,14 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1725">
           <caret line="115" column="51" selection-start-line="115" selection-start-column="51" selection-end-line="115" selection-end-column="51" />
-          <folding>
-            <element signature="e#0#13#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/senti_net.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="195">
-          <caret line="13" column="18" selection-start-line="13" selection-start-column="18" selection-end-line="13" selection-end-column="18" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-            <element signature="e#3473#3781#0" expanded="false" />
-            <element signature="e#3823#4296#0" expanded="false" />
-            <element signature="e#4235#4296#0" expanded="false" />
-            <element signature="e#4338#4752#0" expanded="false" />
-            <element signature="e#4797#5037#0" expanded="false" />
-            <element signature="e#5074#5222#0" expanded="false" />
-            <element signature="e#5276#5636#1" expanded="false" />
-            <element signature="e#6170#9348#0" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/network_components.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-15">
-          <caret line="4" column="0" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
+        <state relative-caret-position="165">
+          <caret line="365" column="0" selection-start-line="365" selection-start-column="0" selection-end-line="365" selection-end-column="0" />
           <folding>
             <element signature="e#0#13#0" expanded="true" />
             <element signature="e#147#1058#0" expanded="false" />
@@ -557,6 +435,34 @@
             <element signature="e#19847#21069#0" expanded="false" />
             <element signature="e#21107#21278#0" expanded="false" />
             <element signature="e#21322#21498#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/senti_net.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="195">
+          <caret line="13" column="18" selection-start-line="13" selection-start-column="18" selection-end-line="13" selection-end-column="18" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#3473#3781#0" expanded="false" />
+            <element signature="e#3823#4296#0" expanded="false" />
+            <element signature="e#4235#4296#0" expanded="false" />
+            <element signature="e#4338#4752#0" expanded="false" />
+            <element signature="e#4797#5037#0" expanded="false" />
+            <element signature="e#5074#5222#0" expanded="false" />
+            <element signature="e#5276#5636#1" expanded="false" />
+            <element signature="e#6170#9348#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/network_optimizers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="390">
+          <caret line="26" column="19" selection-start-line="26" selection-start-column="19" selection-end-line="26" selection-end-column="19" />
+          <folding>
+            <element signature="e#0#13#0" expanded="true" />
           </folding>
         </state>
       </provider>
