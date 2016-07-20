@@ -4,6 +4,20 @@ from theano.tensor.shared_randomstreams import RandomStreams
 import numpy as np
 
 
+def ortho_weight(n_in, n_out):
+    W = np.random.randn(n_out, n_in)
+    u, s, v = np.linalg.svd(W, full_matrices=False)
+    q = u if u.shape == (n_out, n_in) else v
+    return q.astype(theano.config.floatX)
+
+
+def fan_in_out_uniform(n_in, n_out):
+    return np.random.uniform(
+        low=-1 * np.sqrt(6. / (n_in + n_out)),
+        high=1 * np.sqrt(6. / (n_in + n_out)),
+        size=(n_out, n_in)).astype(theano.config.floatX)
+
+
 class Dropout_layer:
     """A layer to perform dropout. Super simple."""
 
@@ -535,17 +549,3 @@ class single_class_sigmoid:
             Treated as size=(num_examples) <--- Scalar output for each example
         """
         return T.nnet.sigmoid(T.dot(self.w, inp) + self.b).flatten()
-
-
-def ortho_weight(n_in, n_out):
-    W = np.random.randn(n_out, n_in)
-    u, s, v = np.linalg.svd(W, full_matrices=False)
-    q = u if u.shape == (n_out, n_in) else v
-    return q.astype(theano.config.floatX)
-
-
-def fan_in_out_uniform(n_in, n_out):
-    return np.random.uniform(
-        low=-1 * np.sqrt(6. / (n_in + n_out)),
-        high=1 * np.sqrt(6. / (n_in + n_out)),
-        size=(n_out, n_in)).astype(theano.config.floatX)
