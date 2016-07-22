@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="7b7019c7-d6eb-47e3-81e1-94d113e2d343" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.ipynb_checkpoints/Run project-checkpoint.ipynb" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/Run project-checkpoint.ipynb" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LSTM dev.ipynb" afterPath="$PROJECT_DIR$/LSTM dev.ipynb" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Run project.ipynb" afterPath="$PROJECT_DIR$/Run project.ipynb" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/network_components.py" afterPath="$PROJECT_DIR$/network_components.py" />
-    </list>
+    <list default="true" id="7b7019c7-d6eb-47e3-81e1-94d113e2d343" name="Default" comment="" />
     <ignored path="sentimiento.iws" />
     <ignored path=".idea/workspace.xml" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -370,7 +364,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="20" y="23" width="1400" height="781" extended-state="0" />
-    <editor active="true" />
+    <editor active="false" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
